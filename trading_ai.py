@@ -398,6 +398,7 @@ def show_trades_and_prediction(data, period, interval):
         st.write(f"**Entry Date**: {active_trades['entry_date'].strftime('%d-%m-%Y %H:%M:%S')}")
         st.write(f"**Entry Price**: {active_trades['entry_price']:.2f}")
         st.write(f"**Stoploss**: {active_trades['stop_loss']:.2f}")
+        st.write(f"**Trailing Stoploss**: {active_trades['trailing_sl']:.2f}")
         st.write(f"**Target**: {active_trades['target']:.2f}")
 
         # Prepare snapshot for prediction
@@ -478,6 +479,7 @@ def show_trades_and_prediction_1(data, period, interval):
         st.write(f"**Entry Date**: {trade['entry_date'].strftime('%d-%m-%Y %H:%M:%S')}")
         st.write(f"**Entry Price**: {trade['entry_price']:.2f}")
         st.write(f"**Stoploss**: {trade['stop_loss']:.2f}")
+        st.write(f"**Trailing Stoploss**: {trade['trailing_sl']:.2f}")
         st.write(f"**Target**: {trade['target']:.2f}")
 
         # Prepare snapshot for prediction
@@ -565,6 +567,7 @@ def show_trades_and_prediction_2(data, period, interval):
         st.write(f"**Entry Date**: {trade['entry_date'].strftime('%d-%m-%Y %H:%M:%S')}")
         st.write(f"**Entry Price**: {trade['entry_price']:.2f}")
         st.write(f"**Stoploss**: {trade['stop_loss']:.2f}")
+        st.write(f"**Trailing Stoploss**: {trade['trailing_sl']:.2f}")
         st.write(f"**Target**: {trade['target']:.2f}")
 
         # Prepare snapshot for prediction

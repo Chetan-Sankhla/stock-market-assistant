@@ -39,7 +39,7 @@ def is_good_time(timestamp):
     minute = timestamp.minute
     return (hour == 9 and minute >= 30) or (10 <= hour <= 14)
 
-def enforce_risk_caps(sl, target, max_sl=100, max_target=200):
+def enforce_risk_caps(sl, target, max_sl=150, max_target=300):
     sl = min(sl, max_sl)
     target = min(target, max_target)
     return sl, target

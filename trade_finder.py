@@ -50,6 +50,7 @@ def find_trades(data, period, interval, trained_model=None, capital=100000):
                     'entry_date': next_candle.name,
                     'entry_price': entry_price,
                     'stop_loss': stop_loss,
+                    'trailing_sl':stop_loss,
                     'target': target
                 }
 
@@ -70,6 +71,7 @@ def find_trades(data, period, interval, trained_model=None, capital=100000):
                     'entry_date': next_candle.name,
                     'entry_price': entry_price,
                     'stop_loss': stop_loss,
+                    'trailing_sl':stop_loss,
                     'target': target
                 }
 
@@ -92,9 +94,15 @@ def find_trades(data, period, interval, trained_model=None, capital=100000):
             exit_date = next_candle.name
 
             if active_trade['type'] == 'buy':
-                if low <= active_trade['stop_loss']:
-                    pnl = active_trade['stop_loss'] - active_trade['entry_price']
-                    exit_price = active_trade['stop_loss']
+                # Trailing SL logic
+                move = high - active_trade['entry_price']
+                if move > 10:
+                    new_sl = active_trade['entry_price'] + (move - 5)
+                    active_trade['trailing_sl'] = max(active_trade['trailing_sl'], new_sl)
+
+                if low <= active_trade['trailing_sl']:
+                    pnl = active_trade['trailing_sl'] - active_trade['entry_price']
+                    exit_price = active_trade['trailing_sl']
                 elif high >= active_trade['target']:
                     pnl = active_trade['target'] - active_trade['entry_price']
                     exit_price = active_trade['target']
@@ -102,9 +110,15 @@ def find_trades(data, period, interval, trained_model=None, capital=100000):
                     continue
 
             elif active_trade['type'] == 'sell':
-                if high >= active_trade['stop_loss']:
-                    pnl = active_trade['entry_price'] - active_trade['stop_loss']
-                    exit_price = active_trade['stop_loss']
+                # Trailing SL logic
+                move = active_trade['entry_price'] - low
+                if move > 10:
+                    new_sl = active_trade['entry_price'] - (move - 5)
+                    active_trade['trailing_sl'] = min(active_trade['trailing_sl'], new_sl)
+
+                if high >= active_trade['trailing_sl']:
+                    pnl = active_trade['entry_price'] - active_trade['trailing_sl']
+                    exit_price = active_trade['trailing_sl']
                 elif low <= active_trade['target']:
                     pnl = active_trade['entry_price'] - active_trade['target']
                     exit_price = active_trade['target']
@@ -119,6 +133,7 @@ def find_trades(data, period, interval, trained_model=None, capital=100000):
                 'exit_price': exit_price,
                 'pnl': pnl,
                 'stop_loss': active_trade['stop_loss'],
+                'trailing_sl':active_trade['trailing_sl'],
                 'target': active_trade['target']
             })
             success = 1 if pnl > 0 else 0
