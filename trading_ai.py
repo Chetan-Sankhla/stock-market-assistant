@@ -393,7 +393,7 @@ def show_trades_and_prediction(data, period, interval):
 
     # Display Active Trade
     if active_trades is not None:
-        st.subheader("📈 Active Trade Signal")
+        st.subheader("📈 Active Trade Signal Method 0")
         st.write(f"**Type**: {active_trades['type'].capitalize()}")
         st.write(f"**Entry Date**: {active_trades['entry_date'].strftime('%d-%m-%Y %H:%M:%S')}")
         st.write(f"**Entry Price**: {active_trades['entry_price']:.2f}")
@@ -466,11 +466,98 @@ def show_trades_and_prediction(data, period, interval):
 
 def show_trades_and_prediction_1(data, period, interval):
     # Detect trades and prepare snapshots
+    trades, snapshots, active_trades = find_trades_1(data, period, interval)
+
+    # Display Active Trade
+    if active_trades is not None and len(active_trades) > 0:
+        st.subheader("📈 Active Trade Signals Method 1")
+
+    for i, trade in enumerate(active_trades if isinstance(active_trades, list) else active_trades.to_dict("records")):
+        st.markdown(f"### 🔹 Trade #{i+1} - {trade['type'].capitalize()}")
+
+        st.write(f"**Entry Date**: {trade['entry_date'].strftime('%d-%m-%Y %H:%M:%S')}")
+        st.write(f"**Entry Price**: {trade['entry_price']:.2f}")
+        st.write(f"**Stoploss**: {trade['stop_loss']:.2f}")
+        st.write(f"**Target**: {trade['target']:.2f}")
+
+        # Prepare snapshot for prediction
+        try:
+            index = data.index.get_loc(trade['entry_date'])
+            row = data.iloc[index]
+        except KeyError:
+            st.warning("⚠️ Entry date not in data range. Skipping prediction.")
+            continue
+
+        rsi_val = ta.rsi(data['Close'], length=14)
+        rsi_value = rsi_val.iloc[index] if not pd.isna(rsi_val.iloc[index]) else None
+        temp_snapshot = {
+            'ema_diff': row['EMA_20'] - row['EMA_50'] if pd.notna(row['EMA_20']) and pd.notna(row['EMA_50']) else None,
+            'atr': row['ATR'] if pd.notna(row['ATR']) else None,
+            'rsi': rsi_value,
+            'price': row['Close'],
+            'mode': get_trade_mode(interval),
+            'position': 1
+        }
+
+        # Predict
+        snapshot_for_prediction = {k: v for k, v in temp_snapshot.items() if k != 'position'}
+        try:
+            prediction, proba = predict_trade_success(snapshot_for_prediction)
+            st.write("🤖 Model Prediction")
+
+            if isinstance(proba, (float, int)):
+                if prediction == 1:
+                    st.success(f"✅ Likely Profitable Trade ({proba * 100:.2f}% confidence)")
+                else:
+                    st.warning(f"⚠️ Likely Unprofitable Trade ({proba * 100:.2f}% confidence)")
+
+                color = "green" if prediction == 1 else "red"
+                fig = go.Figure(go.Indicator(
+                    mode="gauge+number",
+                    value=proba * 100,
+                    title={"text": "Trade Success Probability"},
+                    gauge={
+                        "axis": {"range": [0, 100]},
+                        "bar": {"color": color},
+                        "steps": [
+                            {"range": [0, 50], "color": "lightcoral"},
+                            {"range": [50, 100], "color": "lightgreen"}
+                        ]
+                    }
+                ))
+                st.plotly_chart(fig)
+            else:
+                st.warning(f"Model returned non-probability output: {proba}")
+        except Exception as e:
+            st.error(f"❌ Model prediction failed: {e}")
+    else:
+        st.info("ℹ️ No Active Trade signals found.")
+
+
+    # Show past trades
+    st.write(f"Total Trades: {len(trades)}")
+    if len(trades) > 0:
+        win_rate = (len(trades[trades['pnl'] > 0]) / len(trades)) * 100
+        st.write(f"Win Rate: {win_rate:.2f}%")
+        st.subheader("📋 Trade List")
+        st.dataframe(trades)
+        plot_net_pnl(trades)
+
+        # Train model
+        if len(snapshots) > 0:
+            model = train_ml_model(snapshots, trades)
+            if model:
+                st.success("✅ Model trained successfully on trade outcomes.")
+
+    return trades, active_trades, snapshots
+
+def show_trades_and_prediction_2(data, period, interval):
+    # Detect trades and prepare snapshots
     trades, snapshots, active_trades = find_trades_2(data, period, interval)
 
     # Display Active Trade
     if active_trades is not None and len(active_trades) > 0:
-        st.subheader("📈 Active Trade Signals")
+        st.subheader("📈 Active Trade Signals Method 2")
 
     for i, trade in enumerate(active_trades if isinstance(active_trades, list) else active_trades.to_dict("records")):
         st.markdown(f"### 🔹 Trade #{i+1} - {trade['type'].capitalize()}")
@@ -684,12 +771,14 @@ def main():
     data = calculate_indicators(data)
 
     trades, active_trades, snapshots = show_trades_and_prediction(data, period, interval) if show_trades else ([], [],[])
-    trades_1, active_trades_1, snapshots_1 = show_trades_and_prediction_1(data, period, interval) if show_trades else ([], [],[])
     patterns = show_pattern_detection_stats(data) if show_patterns else None
     candlestick_patterns = detect_candle_patterns(data) if show_candles else None
 
     show_candlestick_chart(data, patterns, candlestick_patterns, trades, active_trades)
-    show_candlestick_chart(data, patterns, candlestick_patterns, trades_1, active_trades_1)
+    #show_candlestick_chart(data, patterns, candlestick_patterns, trades_1, active_trades_1)
+
+    trades_1, active_trades_1, snapshots_1 = show_trades_and_prediction_1(data, period, interval) if show_trades else ([], [],[])
+    trades_2, active_trades_2, snapshots_2 = show_trades_and_prediction_2(data, period, interval) if show_trades else ([], [],[])
 
     if patterns is not None:
         show_patterns_data(patterns)

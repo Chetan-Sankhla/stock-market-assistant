@@ -336,6 +336,7 @@ def find_trades_2(data, period, interval, trained_model=None, capital=100000):
                 'entry_date': next_candle.name,
                 'entry_price': entry_price,
                 'stop_loss': stop_loss,
+                'trailing_sl': stop_loss,
                 'target': target
             })
 
